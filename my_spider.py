@@ -3,83 +3,49 @@
 import urllib.request
 import re
 import os
-for i in range(1,127):
-	url = 'http://www.tupianzj.com/meinv/xiezhen/list_179_' + str(i) + '.html'
-	headers = (
-		# 'Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-		# 'Accept-Encoding', 'gzip, deflate',
-		# 'Connection', 'keep-alive',
-		# 'Referer', 'http://www.tupianzj.com/meinv/xiezhen/list_179_3.html',
-		'User-Agent', 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-	)
 
-	opener = urllib.request.build_opener()
-	opener.addheaders = [headers]
-	urllib.request.install_opener(opener)
+
+headers = ('User-Agent', 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36')
+opener = urllib.request.build_opener()
+opener.addheaders = [headers]
+urllib.request.install_opener(opener)
+for u in range(1, 215):
+	url = 'http://www.tupianzj.com/meinv/xinggan/list_176_' + str(u) + '.html'
 	data = opener.open(url).read().decode('gbk')
-	# print(data)
-
-	#排除其他图干扰
-	pat1 = '<LI>(.+?)</LI>'
+	# 第一层先大致找出每个图片集的封面链接和标题
+	pat1 = '</em></span> </li><li> <a href="(.+?).html" title="(.+?)"><img src="'
 	result = re.compile(pat1).findall(data)
-	result = str(result)
-	# 封面png图片匹配下载
-	# 封面图片地址 封面标题
-	pat2 = '<img src="http://(.+?)" alt="(.+?)" border="0"'
-	result1 = re.compile(pat2).findall(result)
-	result1 = result1[:]
+	result = tuple(result)
+	print(result[0])
 
-	pat3 = '<a href="(.+?)" target="_blank">'
-	result2 = re.compile(pat3).findall(result)  #第一页封面的链接
-
-	# # result2得到每个封面的链接
-	for i in result2:
-		if result2.count(i) != 1:
-			result2.remove(i)
-	print(type(result1))
-	for i in result1:
-		print('result1 = ' + str(i) )
-	print("/************************************************************************************************/")
-	print("/************************************************************************************************/")
-	for i in result2:
-		print('result2 = ' + i)
-
-	# 将result1和result2合并为result3,方便后续遍历
-	result3 = zip(result1,result2)
-	# 按封面来依次创建文件夹
-
-	# 循环下载第一页的内容
-	for i,j in result3:
-		current_path = os.getcwd()
-		#创建文文件夹
-		creat_file = os.path.join(current_path, i[1])
-		if not os.path.exists(creat_file):
-			os.mkdir(creat_file)
-		# 依次打开封面的链接进行图片下载
-		current_url = 'http://www.tupianzj.com' + j
-	#################################################################################
-		for q in range(0,40):
-			try:
-				subfile = opener.open(current_url).read().decode('gbk') #子页面内容
-				if subfile:
-					#pat4 = '<div id=\'bigpic\'> <a href=\'javascript:dPlayNext();\'><a href=\'(.+?)\'><img src="(.+?)" id="bigpicimg"'
-					pat4 = '<img src="(.+?)" id="bigpicimg"'
-					pat5 = "><a href='(.+?)'><img"
-					save_data = re.compile(pat4).findall(subfile)
-					if save_data:
-						save_data = save_data[0]
-					else:
-						continue
-					q += 1
-					name = creat_file + '\\' + str(q)+ '.jpg'
-
-					urllib.request.urlretrieve(save_data,filename=name)
-
-					next_url = re.compile(pat5).findall(subfile)
-					if next_url:
-						current_url = current_url[:39] + str(next_url[0])
-				else:
-					continue
-			except:
-				break
-#################################################################################
+	for sub_url, title in result:
+		# 创建以封面标题命名的文件夹
+		filename = os.getcwd() + "\\" + title
+		# 如果不存在则创建
+		if not os.path.exists(filename):
+			os.mkdir(filename)
+		# 将爬下来的/meinv/20190712/189834.html格式链接，拼上域名作为访问相册集的入口url
+		sub_Url = 'http://www.tupianzj.com' + sub_url + '.html'
+		print(sub_Url)
+		# 打开第一个图片集的入口
+		sub_data = opener.open(sub_Url).read().decode('gbk')
+		# 将打开的大图页面 正则匹配出大图url,并将图片url保存在文件夹中
+		bigpic_pat = '<img src="(.+?)" id="bigpicimg"'
+		bigpic = re.compile(bigpic_pat).findall(sub_data)
+		bigpic = tuple(bigpic)
+		urllib.request.urlretrieve(bigpic[0], filename=filename + "\\" + '1.png')
+		# 获取相册集页数
+		pages_pat = '共(.+?)页'
+		pages = re.compile(pages_pat).findall(sub_data)
+		pages = tuple(pages)
+		pages = int(pages[0])
+		print(pages)
+		for i in range(2, pages):
+			subs_url = 'http://www.tupianzj.com' + sub_url + '_' + str(i) +'.html'
+			print(subs_url)
+			subs_data = opener.open(subs_url).read().decode('gbk')
+			# 将打开的大图页面 正则匹配出大图url,并将图片url保存在文件夹中
+			bigpic_sub_pat = '<img src="(.+?)" id="bigpicimg"'
+			bigpic_sub = re.compile(bigpic_pat).findall(subs_data)
+			bigpic_sub = tuple(bigpic_sub)
+			urllib.request.urlretrieve(bigpic_sub[0], filename=filename + "\\" + str(i) + '.png')
